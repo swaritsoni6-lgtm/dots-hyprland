@@ -57,9 +57,7 @@ Item {
             name: "mode",
             description: Translation.tr("Set agent execution mode (accept-edits, plan, default)"),
             execute: args => {
-                if (args.length > 0) {
-                    Ai.addMessage(Translation.tr("Agent mode set to: %1").arg(args[0]), Ai.interfaceRole);
-                }
+                Ai.setMode(args.join(" ").trim());
             }
         },
         {
@@ -442,6 +440,25 @@ Item {
                                         name: `${root.commandPrefix}model ${model.target}`,
                                         displayName: `${Ai.models[model.target].name}`,
                                         description: `${Ai.models[model.target].description}`
+                                    };
+                                });
+                            } else if (messageInputField.text.startsWith(`${root.commandPrefix}mode`)) {
+                                root.suggestionQuery = messageInputField.text.split(" ")[1] ?? "";
+                                const modeResults = Fuzzy.go(root.suggestionQuery, Ai.availableModes.map(mode => {
+                                    return {
+                                        name: Fuzzy.prepare(mode),
+                                        obj: mode
+                                    };
+                                }), {
+                                    all: true,
+                                    key: "name"
+                                });
+                                root.suggestionList = modeResults.map(res => {
+                                    const modeName = res.obj.obj;
+                                    return {
+                                        name: `${root.commandPrefix}mode ${modeName}`,
+                                        displayName: modeName,
+                                        description: Ai.modeDescriptions[modeName] ?? ""
                                     };
                                 });
                             } else if (messageInputField.text.startsWith(`${root.commandPrefix}prompt`)) {

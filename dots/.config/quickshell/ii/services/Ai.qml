@@ -72,6 +72,13 @@ Singleton {
     property list<var> promptFiles: [...defaultPrompts, ...userPrompts]
     property list<var> savedChats: []
     property string activeConversationId: ""
+    property string currentMode: "default"
+    property list<var> availableModes: ["default", "accept-edits", "plan"]
+    property var modeDescriptions: {
+        "default": Translation.tr("Standard interactive execution mode"),
+        "accept-edits": Translation.tr("Auto-accept proposed file edits without prompting"),
+        "plan": Translation.tr("Planning mode - create and review implementation plan first")
+    }
 
     property var promptSubstitutions: {
         "{DISTRO}": SystemInfo.distroName,
@@ -562,6 +569,17 @@ Singleton {
             if (feedback) root.addMessage(Translation.tr("Model set to %1").arg(model.name), root.interfaceRole);
         } else {
             if (feedback) root.addMessage(Translation.tr("Invalid model. Supported:\n```\n") + modelList.join("\n```\n```\n") + "\n```", root.interfaceRole);
+        }
+    }
+
+    function setMode(mode) {
+        if (!mode || mode.toString().trim().length === 0) return;
+        const targetMode = mode.toString().trim().toLowerCase();
+        if (availableModes.indexOf(targetMode) !== -1) {
+            currentMode = targetMode;
+            root.addMessage(Translation.tr("Agent mode set to: %1").arg(targetMode), root.interfaceRole);
+        } else {
+            root.addMessage(Translation.tr("Invalid mode. Supported modes:\n- %1").arg(availableModes.join("\n- ")), root.interfaceRole);
         }
     }
 
