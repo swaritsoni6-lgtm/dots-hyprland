@@ -23,6 +23,7 @@ Singleton {
     property Component geminiApiStrategy: GeminiApiStrategy {}
     property Component openaiApiStrategy: OpenAiApiStrategy {}
     property Component mistralApiStrategy: MistralApiStrategy {}
+    property Component antigravityApiStrategy: AntigravityApiStrategy {}
     readonly property string interfaceRole: "interface"
     readonly property string apiKeyEnvVarName: "API_KEY"
 
@@ -70,6 +71,7 @@ Singleton {
     property list<var> userPrompts: []
     property list<var> promptFiles: [...defaultPrompts, ...userPrompts]
     property list<var> savedChats: []
+    property string activeConversationId: ""
 
     property var promptSubstitutions: {
         "{DISTRO}": SystemInfo.distroName,
@@ -233,9 +235,14 @@ Singleton {
             ],
             "search": [],
             "none": [],
+        },
+        "antigravity": {
+            "functions": [],
+            "search": [],
+            "none": [],
         }
     }
-    property list<var> availableTools: Object.keys(root.tools[models[currentModelId]?.api_format])
+    property list<var> availableTools: (root.tools[models[currentModelId]?.api_format] ? Object.keys(root.tools[models[currentModelId]?.api_format]) : [])
     property var toolDescriptions: {
         "functions": Translation.tr("Commands, edit configs, search.\nTakes an extra turn to switch to search mode if that's needed"),
         "search": Translation.tr("Gives the model search capabilities (immediately)"),
@@ -255,44 +262,83 @@ Singleton {
     // - api_format: The API format of the model. Can be "openai" or "gemini". Default is "openai".
     // - extraParams: Extra parameters to be passed to the model. This is a JSON object.
     property var models: Config.options.policies.ai === 2 ? {} : {
-        "gemini-2.5-flash": aiModelComponent.createObject(this, {
-            "name": "Gemini 2.5 Flash",
+        "Gemini 3.5 Flash (Medium)": aiModelComponent.createObject(this, {
+            "name": "Gemini 3.5 Flash (Medium)",
             "icon": "google-gemini-symbolic",
-            "description": Translation.tr("Online | Google's model\nNewer model that's slower than its predecessor but should deliver higher quality answers"),
+            "description": Translation.tr("Antigravity Native Model | Gemini 3.5 Flash Medium Reasoning"),
             "homepage": "https://aistudio.google.com",
-            "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent",
-            "model": "gemini-2.5-flash",
-            "requires_key": true,
+            "endpoint": "antigravity://localhost",
+            "model": "Gemini 3.5 Flash (Medium)",
+            "requires_key": false,
             "key_id": "gemini",
-            "key_get_link": "https://aistudio.google.com/app/apikey",
-            "key_get_description": Translation.tr("**Pricing**: free. Data used for training.\n\n**Instructions**: Log into Google account, allow AI Studio to create Google Cloud project or whatever it asks, go back and click Get API key"),
-            "api_format": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
         }),
-        "gemini-3-flash": aiModelComponent.createObject(this, {
-            "name": "Gemini 3 Flash",
+        "Gemini 3.5 Flash (High)": aiModelComponent.createObject(this, {
+            "name": "Gemini 3.5 Flash (High)",
             "icon": "google-gemini-symbolic",
-            "description": Translation.tr("Online | Google's model\nPro-level intelligence at the speed and pricing of Flash."),
+            "description": Translation.tr("Antigravity Native Model | Gemini 3.5 Flash High Reasoning"),
             "homepage": "https://aistudio.google.com",
-            "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent",
-            "model": "gemini-3-flash-preview",
-            "requires_key": true,
+            "endpoint": "antigravity://localhost",
+            "model": "Gemini 3.5 Flash (High)",
+            "requires_key": false,
             "key_id": "gemini",
-            "key_get_link": "https://aistudio.google.com/app/apikey",
-            "key_get_description": Translation.tr("**Pricing**: free. Data used for training.\n\n**Instructions**: Log into Google account, allow AI Studio to create Google Cloud project or whatever it asks, go back and click Get API key"),
-            "api_format": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
         }),
-        "mistral-medium-3": aiModelComponent.createObject(this, {
-            "name": "Mistral Medium 3",
-            "icon": "mistral-symbolic",
-            "description": Translation.tr("Online | %1's model | Delivers fast, responsive and well-formatted answers. Disadvantages: not very eager to do stuff; might make up unknown function calls").arg("Mistral"),
-            "homepage": "https://mistral.ai/news/mistral-medium-3",
-            "endpoint": "https://api.mistral.ai/v1/chat/completions",
-            "model": "mistral-medium-2505",
-            "requires_key": true,
-            "key_id": "mistral",
-            "key_get_link": "https://console.mistral.ai/api-keys",
-            "key_get_description": Translation.tr("**Instructions**: Log into Mistral account, go to Keys on the sidebar, click Create new key"),
-            "api_format": "mistral",
+        "Gemini 3.1 Pro (High)": aiModelComponent.createObject(this, {
+            "name": "Gemini 3.1 Pro (High)",
+            "icon": "google-gemini-symbolic",
+            "description": Translation.tr("Antigravity Native Model | Gemini 3.1 Pro Frontier Reasoning"),
+            "homepage": "https://aistudio.google.com",
+            "endpoint": "antigravity://localhost",
+            "model": "Gemini 3.1 Pro (High)",
+            "requires_key": false,
+            "key_id": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
+        }),
+        "Claude Sonnet 4.6 (Thinking)": aiModelComponent.createObject(this, {
+            "name": "Claude Sonnet 4.6 (Thinking)",
+            "icon": "neurology",
+            "description": Translation.tr("Antigravity Native Model | Claude Sonnet 4.6 Thinking"),
+            "homepage": "https://anthropic.com",
+            "endpoint": "antigravity://localhost",
+            "model": "Claude Sonnet 4.6 (Thinking)",
+            "requires_key": false,
+            "key_id": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
+        }),
+        "Claude Opus 4.6 (Thinking)": aiModelComponent.createObject(this, {
+            "name": "Claude Opus 4.6 (Thinking)",
+            "icon": "neurology",
+            "description": Translation.tr("Antigravity Native Model | Claude Opus 4.6 Thinking"),
+            "homepage": "https://anthropic.com",
+            "endpoint": "antigravity://localhost",
+            "model": "Claude Opus 4.6 (Thinking)",
+            "requires_key": false,
+            "key_id": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
+        }),
+        "GPT-OSS 120B (Medium)": aiModelComponent.createObject(this, {
+            "name": "GPT-OSS 120B (Medium)",
+            "icon": "neurology",
+            "description": Translation.tr("Antigravity Native Model | GPT-OSS 120B Open Model"),
+            "homepage": "https://openai.com",
+            "endpoint": "antigravity://localhost",
+            "model": "GPT-OSS 120B (Medium)",
+            "requires_key": false,
+            "key_id": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
         }),
     }
     property var modelList: Object.keys(root.models)
@@ -302,6 +348,7 @@ Singleton {
         "openai": openaiApiStrategy.createObject(this),
         "gemini": geminiApiStrategy.createObject(this),
         "mistral": mistralApiStrategy.createObject(this),
+        "antigravity": antigravityApiStrategy.createObject(this),
     }
     property ApiStrategy currentApiStrategy: apiStrategies[models[currentModelId]?.api_format || "openai"]
 
@@ -415,16 +462,25 @@ Singleton {
         }
     }
 
+    function refreshSavedChats() {
+        getSavedChats.running = true;
+    }
+
     Process {
         id: getSavedChats
         running: true
-        command: ["ls", "-1", Directories.aiChats]
+        command: ["python3", Quickshell.shellPath("scripts/get_conversations.py")]
         stdout: StdioCollector {
             onStreamFinished: {
-                if (text.length === 0) return;
-                root.savedChats = text.split("\n")
-                    .filter(fileName => fileName.endsWith(".json"))
-                    .map(fileName => `${Directories.aiChats}/${fileName}`)
+                if (text.trim().length === 0) {
+                    root.savedChats = [];
+                    return;
+                }
+                try {
+                    root.savedChats = JSON.parse(text.trim());
+                } catch(e) {
+                    root.savedChats = [];
+                }
             }
         }
     }
@@ -484,28 +540,28 @@ Singleton {
     }
 
     function setModel(modelId, feedback = true, setPersistentState = true) {
-        if (!modelId) modelId = ""
-        modelId = modelId.toLowerCase()
-        if (modelList.indexOf(modelId) !== -1) {
-            const model = models[modelId]
-            // See if policy prevents online models
-            if (Config.options.policies.ai === 2 && !model.endpoint.includes("localhost")) {
-                root.addMessage(
-                    Translation.tr("Online models disallowed\n\nControlled by `policies.ai` config option"),
-                    root.interfaceRole
-                );
-                return;
+        if (!modelId || modelId.toString().trim().length === 0) return;
+        let targetId = modelId.toString().trim();
+        if (!models[targetId]) {
+            const lower = targetId.toLowerCase();
+            const found = Object.keys(models).find(k => 
+                k.toLowerCase() === lower || 
+                k.toLowerCase().includes(lower) || 
+                models[k].name.toLowerCase().includes(lower) ||
+                models[k].model.toLowerCase() === lower
+            );
+            if (found) {
+                targetId = found;
             }
-            if (setPersistentState) Persistent.states.ai.model = modelId;
+        }
+
+        if (models[targetId]) {
+            const model = models[targetId];
+            currentModelId = targetId;
+            if (setPersistentState) Persistent.states.ai.model = targetId;
             if (feedback) root.addMessage(Translation.tr("Model set to %1").arg(model.name), root.interfaceRole);
-            if (model.requires_key) {
-                // If key not there show advice
-                if (root.apiKeysLoaded && (!root.apiKeys[model.key_id] || root.apiKeys[model.key_id].length === 0)) {
-                    root.addApiKeyAdvice(model)
-                }
-            }
         } else {
-            if (feedback) root.addMessage(Translation.tr("Invalid model. Supported: \n```\n") + modelList.join("\n```\n```\n"), Ai.interfaceRole) + "\n```"
+            if (feedback) root.addMessage(Translation.tr("Invalid model. Supported:\n```\n") + modelList.join("\n```\n```\n") + "\n```", root.interfaceRole);
         }
     }
 
@@ -566,6 +622,7 @@ Singleton {
     }
 
     function clearMessages() {
+        root.activeConversationId = "";
         root.messageIDs = [];
         root.messageByID = ({});
         root.tokenCount.input = -1;
@@ -872,46 +929,48 @@ Singleton {
         getSavedChats.running = true;
     }
 
+    Process {
+        id: loadConversationProcess
+        property string requestedCid: ""
+        command: ["python3", Quickshell.shellPath("scripts/get_conversations.py"), "get", requestedCid]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim().length === 0) return;
+                try {
+                    const msgs = JSON.parse(text.trim());
+                    if (Array.isArray(msgs) && msgs.length > 0) {
+                        root.clearMessages();
+                        root.activeConversationId = loadConversationProcess.requestedCid;
+                        root.messageIDs = msgs.map((_, i) => i);
+                        for (let i = 0; i < msgs.length; i++) {
+                            const message = msgs[i];
+                            root.messageByID[i] = root.aiMessageComponent.createObject(root, {
+                                "role": message.role,
+                                "rawContent": message.rawContent,
+                                "content": message.rawContent,
+                                "thinking": false,
+                                "done": true,
+                                "visibleToUser": true
+                            });
+                        }
+                        root.addMessage(Translation.tr("Resumed conversation session: %1").arg(loadConversationProcess.requestedCid), root.interfaceRole);
+                    }
+                } catch(e) {
+                    console.log("[AI] Could not parse loaded conversation JSON: ", e);
+                }
+            }
+        }
+    }
+
     /**
-     * Loads chat from a JSON list of message objects.
-     * @param chatName name of the chat
+     * Loads chat from session ID or JSON file.
+     * @param chatName name or session ID of the chat
      */
     function loadChat(chatName) {
-        try {
-            chatSaveFile.chatName = chatName.trim()
-            chatSaveFile.reload()
-            const saveContent = chatSaveFile.text()
-            // console.log(saveContent)
-            const saveData = JSON.parse(saveContent)
-            root.clearMessages()
-            root.messageIDs = saveData.map((_, i) => {
-                return i
-            })
-            // console.log(JSON.stringify(messageIDs))
-            for (let i = 0; i < saveData.length; i++) {
-                const message = saveData[i];
-                root.messageByID[i] = root.aiMessageComponent.createObject(root, {
-                    "role": message.role,
-                    "rawContent": message.rawContent,
-                    "content": message.rawContent,
-                    "fileMimeType": message.fileMimeType,
-                    "fileUri": message.fileUri,
-                    "localFilePath": message.localFilePath,
-                    "model": message.model,
-                    "thinking": message.thinking,
-                    "done": message.done,
-                    "annotations": message.annotations,
-                    "annotationSources": message.annotationSources,
-                    "functionName": message.functionName,
-                    "functionCall": message.functionCall,
-                    "functionResponse": message.functionResponse,
-                    "visibleToUser": message.visibleToUser,
-                });
-            }
-        } catch (e) {
-            console.log("[AI] Could not load chat: ", e);
-        } finally {
-            getSavedChats.running = true;
-        }
+        if (!chatName || chatName.trim().length === 0) return;
+        const cid = chatName.trim();
+        root.activeConversationId = cid;
+        loadConversationProcess.requestedCid = cid;
+        loadConversationProcess.running = true;
     }
 }

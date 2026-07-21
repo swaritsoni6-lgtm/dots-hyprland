@@ -44,157 +44,56 @@ Item {
 
     property var allCommands: [
         {
-            name: "attach",
-            description: Translation.tr("Attach a file. Only works with Gemini."),
-            execute: args => {
-                Ai.attachFile(args.join(" ").trim());
-            }
-        },
-        {
             name: "model",
-            description: Translation.tr("Choose model"),
+            description: Translation.tr("Choose active model"),
             execute: args => {
-                Ai.setModel(args[0]);
-            }
-        },
-        {
-            name: "tool",
-            description: Translation.tr("Set the tool to use for the model."),
-            execute: args => {
-                // console.log(args)
-                if (args.length == 0 || args[0] == "get") {
-                    Ai.addMessage(Translation.tr("Usage: %1tool TOOL_NAME").arg(root.commandPrefix), Ai.interfaceRole);
-                } else {
-                    const tool = args[0];
-                    const switched = Ai.setTool(tool);
-                    if (switched) {
-                        Ai.addMessage(Translation.tr("Tool set to: %1").arg(tool), Ai.interfaceRole);
-                    }
+                const fullModelName = args.join(" ").trim();
+                if (fullModelName.length > 0) {
+                    Ai.setModel(fullModelName);
                 }
             }
         },
         {
-            name: "prompt",
-            description: Translation.tr("Set the system prompt for the model."),
+            name: "mode",
+            description: Translation.tr("Set agent execution mode (accept-edits, plan, default)"),
             execute: args => {
-                if (args.length === 0 || args[0] === "get") {
-                    Ai.printPrompt();
-                    return;
+                if (args.length > 0) {
+                    Ai.addMessage(Translation.tr("Agent mode set to: %1").arg(args[0]), Ai.interfaceRole);
                 }
-                Ai.loadPrompt(args.join(" ").trim());
-            }
-        },
-        {
-            name: "key",
-            description: Translation.tr("Set API key"),
-            execute: args => {
-                if (args[0] == "get") {
-                    Ai.printApiKey();
-                } else {
-                    Ai.setApiKey(args[0]);
-                }
-            }
-        },
-        {
-            name: "save",
-            description: Translation.tr("Save chat"),
-            execute: args => {
-                const joinedArgs = args.join(" ");
-                if (joinedArgs.trim().length == 0) {
-                    Ai.addMessage(Translation.tr("Usage: %1save CHAT_NAME").arg(root.commandPrefix), Ai.interfaceRole);
-                    return;
-                }
-                Ai.saveChat(joinedArgs);
             }
         },
         {
             name: "load",
-            description: Translation.tr("Load chat"),
+            description: Translation.tr("Load past conversation by ID or file"),
             execute: args => {
-                const joinedArgs = args.join(" ");
-                if (joinedArgs.trim().length == 0) {
-                    Ai.addMessage(Translation.tr("Usage: %1load CHAT_NAME").arg(root.commandPrefix), Ai.interfaceRole);
+                const joinedArgs = args.join(" ").trim();
+                if (joinedArgs.length === 0) {
+                    Ai.addMessage(Translation.tr("Usage: %1load CONVERSATION_ID").arg(root.commandPrefix), Ai.interfaceRole);
                     return;
                 }
                 Ai.loadChat(joinedArgs);
             }
         },
         {
-            name: "clear",
-            description: Translation.tr("Clear chat history"),
+            name: "continue",
+            description: Translation.tr("Continue and load the most recent conversation session"),
             execute: () => {
-                Ai.clearMessages();
-            }
-        },
-        {
-            name: "temp",
-            description: Translation.tr("Set temperature (randomness) of the model. Values range between 0 to 2 for Gemini, 0 to 1 for other models. Default is 0.5."),
-            execute: args => {
-                // console.log(args)
-                if (args.length == 0 || args[0] == "get") {
-                    Ai.printTemperature();
+                Ai.refreshSavedChats();
+                if (Ai.savedChats && Ai.savedChats.length > 0) {
+                    const latestId = Ai.savedChats[0].id;
+                    Ai.loadChat(latestId);
                 } else {
-                    const temp = parseFloat(args[0]);
-                    Ai.setTemperature(temp);
+                    Ai.addMessage(Translation.tr("No previous conversation session found."), Ai.interfaceRole);
                 }
             }
         },
         {
-            name: "test",
-            description: Translation.tr("Markdown test"),
+            name: "clear",
+            description: Translation.tr("Clear chat history and start fresh conversation"),
             execute: () => {
-                Ai.addMessage(`
-<think>
-A longer think block to test revealing animation
-OwO wem ipsum dowo sit amet, consekituwet awipiscing ewit, sed do eiuwsmod tempow inwididunt ut wabowe et dowo mawa. Ut enim ad minim weniam, quis nostwud exeucitation uwuwamcow bowowis nisi ut awiquip ex ea commowo consequat. Duuis aute iwuwe dowo in wepwependewit in wowuptate velit esse ciwwum dowo eu fugiat nuwa pawiatuw. Excepteuw sint occaecat cupidatat non pwowoident, sunt in cuwpa qui officia desewunt mowit anim id est wabowum. Meouw! >w<
-Mowe uwu wem ipsum!
-</think>
-## ✏️ Markdown test
-### Formatting
-
-- *Italic*, \`Monospace\`, **Bold**, [Link](https://example.com)
-- Arch lincox icon <img src="${Quickshell.shellPath("assets/icons/arch-symbolic.svg")}" height="${Appearance.font.pixelSize.small}"/>
-
-### Table
-
-Quickshell vs AGS/Astal
-
-|                          | Quickshell       | AGS/Astal         |
-|--------------------------|------------------|-------------------|
-| UI Toolkit               | Qt               | Gtk3/Gtk4         |
-| Language                 | QML              | Js/Ts/Lua         |
-| Reactivity               | Implied          | Needs declaration |
-| Widget placement         | Mildly difficult | More intuitive    |
-| Bluetooth & Wifi support | ❌               | ✅                |
-| No-delay keybinds        | ✅               | ❌                |
-| Development              | New APIs         | New syntax        |
-
-### Code block
-
-Just a hello world...
-
-\`\`\`cpp
-#include <bits/stdc++.h>
-// This is intentionally very long to test scrolling
-const std::string GREETING = \"UwU\";
-int main(int argc, char* argv[]) {
-    std::cout << GREETING;
-}
-\`\`\`
-
-### LaTeX
-
-
-Inline w/ dollar signs: $\\frac{1}{2} = \\frac{2}{4}$
-
-Inline w/ double dollar signs: $$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$
-
-Inline w/ backslash and square brackets \\[\\int_0^\\infty \\frac{1}{x^2} dx = \\infty\\]
-
-Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
-`, Ai.interfaceRole);
+                Ai.clearMessages();
             }
-        },
+        }
     ]
 
     function handleInput(inputText) {
@@ -397,8 +296,8 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 z: 2
                 shown: Ai.messageIDs.length === 0
                 icon: "neurology"
-                title: Translation.tr("Large language models")
-                description: Translation.tr("Type /key to get started with online models\nCtrl+O to expand sidebar\nCtrl+P to pin sidebar\nCtrl+D to detach sidebar")
+                title: Translation.tr("Antigravity AI Agent")
+                description: Translation.tr("Powered by Antigravity CLI (agy)\nUses first-party account quota (no API key needed)\nType /model to select model • /load to load sessions\nCtrl+O to expand sidebar • Ctrl+P to pin sidebar")
                 shape: MaterialShape.Shape.PixelCircle
             }
 
@@ -540,7 +439,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                 });
                                 root.suggestionList = modelResults.map(model => {
                                     return {
-                                        name: `${messageInputField.text.trim().split(" ").length == 1 ? (root.commandPrefix + "model ") : ""}${model.target}`,
+                                        name: `${root.commandPrefix}model ${model.target}`,
                                         displayName: `${Ai.models[model.target].name}`,
                                         description: `${Ai.models[model.target].description}`
                                     };
@@ -583,22 +482,23 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                     };
                                 });
                             } else if (messageInputField.text.startsWith(`${root.commandPrefix}load`)) {
+                                Ai.refreshSavedChats();
                                 root.suggestionQuery = messageInputField.text.split(" ")[1] ?? "";
-                                const promptFileResults = Fuzzy.go(root.suggestionQuery, Ai.savedChats.map(file => {
+                                const promptFileResults = Fuzzy.go(root.suggestionQuery, Ai.savedChats.map(item => {
                                     return {
-                                        name: Fuzzy.prepare(file),
-                                        obj: file
+                                        name: Fuzzy.prepare((item.title ?? "") + " " + (item.id ?? "")),
+                                        obj: item
                                     };
                                 }), {
                                     all: true,
                                     key: "name"
                                 });
-                                root.suggestionList = promptFileResults.map(file => {
-                                    const chatName = FileUtils.trimFileExt(FileUtils.fileNameForPath(file.target)).trim();
+                                root.suggestionList = promptFileResults.map(res => {
+                                    const item = res.obj.obj;
                                     return {
-                                        name: `${messageInputField.text.trim().split(" ").length == 1 ? (root.commandPrefix + "load ") : ""}${chatName}`,
-                                        displayName: `${chatName}`,
-                                        description: Translation.tr(`Load chat from %1`).arg(file.target)
+                                        name: `${root.commandPrefix}load ${item.id}`,
+                                        displayName: `${item.title}`,
+                                        description: `${item.desc}`
                                     };
                                 });
                             } else if (messageInputField.text.startsWith(`${root.commandPrefix}tool`)) {
