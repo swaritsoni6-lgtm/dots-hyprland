@@ -9,6 +9,18 @@ ApiStrategy {
         return "antigravity://localhost";
     }
 
+    function reset() {
+        // Reset strategy state
+    }
+
+    function onRequestFinished(message) {
+        return { "finished": true };
+    }
+
+    function buildScriptFileSetup(filePath: string): string {
+        return "";
+    }
+
     function buildRequestData(model: AiModel, messages, systemPrompt: string, temperature: real, tools: list<var>, filePath: string) {
         let lastUserMessage = "";
         for (let i = messages.length - 1; i >= 0; i--) {
@@ -32,16 +44,25 @@ ApiStrategy {
 
     function finalizeScriptContent(scriptContent: string): string {
         return `#!/usr/bin/env bash
-RAW_SCRIPT=$(cat << 'ANTIGRAVITY_EOF'
-${scriptContent}
+LOGFILE="/tmp/quickshell_ai_debug.log"
+echo "=== REQUEST STARTED AT $(date) ===" >> "$LOGFILE"
+
+eval $(python3 - << 'ANTIGRAVITY_EOF'
+import sys, json, re, shlex
+text = sys.stdin.read()
+m = re.search(r"--data \x27(.*)\x27", text)
+if m:
+    try:
+        data = json.loads(m.group(1))
+        print(f"PROMPT={shlex.quote(str(data.get('prompt', '')))}")
+        print(f"MODEL={shlex.quote(str(data.get('model', '')))}")
+        print(f"MODE={shlex.quote(str(data.get('mode', '')))}")
+        print(f"CONVERSATION_ID={shlex.quote(str(data.get('conversationId', '')))}")
+        print(f"IS_CONTINUE=1" if data.get("isContinue") else "IS_CONTINUE=0")
+    except Exception as e:
+        print(f"# Python error: {e}")
 ANTIGRAVITY_EOF
 )
-
-PROMPT=$(echo "$RAW_SCRIPT" | grep -o '"prompt":"[^"]*"' | head -n1 | cut -d'"' -f4)
-MODEL=$(echo "$RAW_SCRIPT" | grep -o '"model":"[^"]*"' | head -n1 | cut -d'"' -f4)
-MODE=$(echo "$RAW_SCRIPT" | grep -o '"mode":"[^"]*"' | head -n1 | cut -d'"' -f4)
-CONVERSATION_ID=$(echo "$RAW_SCRIPT" | grep -o '"conversationId":"[^"]*"' | head -n1 | cut -d'"' -f4)
-IS_CONTINUE=$(echo "$RAW_SCRIPT" | grep -o '"isContinue":true')
 
 if [ -z "$PROMPT" ]; then
     PROMPT="Hello"
@@ -56,9 +77,12 @@ if [ -n "$MODE" ] && [ "$MODE" != "default" ]; then
 fi
 if [ -n "$CONVERSATION_ID" ]; then
     ARGS+=("--conversation" "$CONVERSATION_ID")
-elif [ -n "$IS_CONTINUE" ]; then
+elif [ "$IS_CONTINUE" = "1" ]; then
     ARGS+=("--continue")
 fi
+
+echo "PARSED PROMPT: $PROMPT" >> "$LOGFILE"
+echo "EXECUTING: /usr/bin/agy \${ARGS[*]}" >> "$LOGFILE"
 
 exec /usr/bin/agy "\${ARGS[@]}"
 `;

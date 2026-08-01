@@ -269,6 +269,45 @@ Singleton {
     // - api_format: The API format of the model. Can be "openai" or "gemini". Default is "openai".
     // - extraParams: Extra parameters to be passed to the model. This is a JSON object.
     property var models: Config.options.policies.ai === 2 ? {} : {
+        "Gemini 3.6 Flash (Medium)": aiModelComponent.createObject(this, {
+            "name": "Gemini 3.6 Flash (Medium)",
+            "icon": "google-gemini-symbolic",
+            "description": Translation.tr("Antigravity Native Model | Gemini 3.6 Flash Medium Reasoning"),
+            "homepage": "https://aistudio.google.com",
+            "endpoint": "antigravity://localhost",
+            "model": "Gemini 3.6 Flash (Medium)",
+            "requires_key": false,
+            "key_id": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
+        }),
+        "Gemini 3.6 Flash (High)": aiModelComponent.createObject(this, {
+            "name": "Gemini 3.6 Flash (High)",
+            "icon": "google-gemini-symbolic",
+            "description": Translation.tr("Antigravity Native Model | Gemini 3.6 Flash High Reasoning"),
+            "homepage": "https://aistudio.google.com",
+            "endpoint": "antigravity://localhost",
+            "model": "Gemini 3.6 Flash (High)",
+            "requires_key": false,
+            "key_id": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
+        }),
+        "Gemini 3.6 Flash (Low)": aiModelComponent.createObject(this, {
+            "name": "Gemini 3.6 Flash (Low)",
+            "icon": "google-gemini-symbolic",
+            "description": Translation.tr("Antigravity Native Model | Gemini 3.6 Flash Low Reasoning"),
+            "homepage": "https://aistudio.google.com",
+            "endpoint": "antigravity://localhost",
+            "model": "Gemini 3.6 Flash (Low)",
+            "requires_key": false,
+            "key_id": "gemini",
+            "key_get_link": "",
+            "key_get_description": Translation.tr("Uses signed-in Antigravity account"),
+            "api_format": "antigravity",
+        }),
         "Gemini 3.5 Flash (Medium)": aiModelComponent.createObject(this, {
             "name": "Gemini 3.5 Flash (Medium)",
             "icon": "google-gemini-symbolic",
@@ -357,7 +396,7 @@ Singleton {
         "mistral": mistralApiStrategy.createObject(this),
         "antigravity": antigravityApiStrategy.createObject(this),
     }
-    property ApiStrategy currentApiStrategy: apiStrategies[models[currentModelId]?.api_format || "openai"]
+    property ApiStrategy currentApiStrategy: apiStrategies[models[currentModelId]?.api_format || "antigravity"] || apiStrategies["antigravity"]
 
     function addUserModels() {
         (Config?.options.ai?.extraModels ?? []).forEach(model => {
@@ -374,10 +413,17 @@ Singleton {
         }
     }
 
-    property string requestScriptFilePath: "/tmp/quickshell/ai/request.sh"
+    property string requestScriptFilePath: "/tmp/quickshell_ai_request.sh"
     property string pendingFilePath: ""
 
+    Process {
+        id: ensureTmpDirProc
+        running: true
+        command: ["mkdir", "-p", "/tmp/quickshell/ai"]
+    }
+
     Component.onCompleted: {
+        ensureTmpDirProc.running = true;
         setModel(currentModelId, false, false); // Do necessary setup for model
         root.addUserModels() // Config onReadyChanged above might not fire if config is loaded before this service
     }
@@ -669,7 +715,7 @@ Singleton {
         }
 
         function makeRequest() {
-            const model = models[currentModelId];
+            const model = models[currentModelId] || models[modelList[0]] || models["Gemini 3.5 Flash (Medium)"];
 
             // Fetch API keys if needed
             if (model?.requires_key && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData();
@@ -678,13 +724,14 @@ Singleton {
             requester.currentStrategy.reset(); // Reset strategy state
 
             /* Put API key in environment variable */
-            if (model.requires_key) requester.environment[`${root.apiKeyEnvVarName}`] = root.apiKeys ? (root.apiKeys[model.key_id] ?? "") : ""
+            if (model && model.requires_key) requester.environment[`${root.apiKeyEnvVarName}`] = root.apiKeys ? (root.apiKeys[model.key_id] ?? "") : ""
 
             /* Build endpoint, request data */
             const endpoint = root.currentApiStrategy.buildEndpoint(model);
             const messageArray = root.messageIDs.map(id => root.messageByID[id]);
             const filteredMessageArray = messageArray.filter(message => message.role !== Ai.interfaceRole);
-            const data = root.currentApiStrategy.buildRequestData(model, filteredMessageArray, root.systemPrompt, root.temperature, root.tools[model.api_format][root.currentTool], root.pendingFilePath);
+            const toolsList = (root.tools[model?.api_format] && root.tools[model?.api_format][root.currentTool]) ? root.tools[model?.api_format][root.currentTool] : [];
+            const data = root.currentApiStrategy.buildRequestData(model, filteredMessageArray, root.systemPrompt, root.temperature, toolsList, root.pendingFilePath);
             // console.log("[Ai] Request data: ", JSON.stringify(data, null, 2));
 
             let requestHeaders = {
@@ -740,8 +787,9 @@ Singleton {
             const shellScriptPath = CF.FileUtils.trimFileProtocol(root.requestScriptFilePath)
             requesterScriptFile.path = Qt.resolvedUrl(shellScriptPath)
             requesterScriptFile.setText(scriptContent)
-            requester.command = baseCommand.concat([shellScriptPath]);
-            requester.running = true
+            requester.running = false;
+            requester.command = ["bash", "-c", scriptContent];
+            requester.running = true;
         }
 
         stdout: SplitParser {

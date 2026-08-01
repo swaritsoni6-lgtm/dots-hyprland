@@ -283,9 +283,7 @@ Item {
                     required property var modelData
                     required property int index
                     messageIndex: index
-                    messageData: {
-                        Ai.messageByID[modelData];
-                    }
+                    messageData: Ai.messageByID[modelData]
                     messageInputField: root.inputField
                 }
             }
@@ -570,10 +568,13 @@ Item {
                                     event.accepted = true;
                                 } else {
                                     // Accept text
-                                    const inputText = messageInputField.text;
-                                    messageInputField.clear();
-                                    root.handleInput(inputText);
+                                    const inputText = messageInputField.text.trim();
                                     event.accepted = true;
+                                    messageInputField.clear();
+                                    Qt.callLater(() => { messageInputField.text = ""; });
+                                    if (inputText.length > 0) {
+                                        root.handleInput(inputText);
+                                    }
                                 }
                             } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_V) {
                                 // Intercept Ctrl+V to handle image/file pasting
