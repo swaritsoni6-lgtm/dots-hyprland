@@ -31,3 +31,9 @@ if status is-interactive
         alias ssh 'kitten ssh'
     end
 end
+
+# Auto-start Hyprland on TTY1 login
+if test -f ~/.config/fish/auto-Hypr.fish
+    source ~/.config/fish/auto-Hypr.fish
+end
+
